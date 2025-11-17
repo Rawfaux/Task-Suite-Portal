@@ -1,10 +1,9 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TaskSuite</title>
+  <title>TaskSuite Portal</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
@@ -15,13 +14,47 @@
   </header>
 
   <div class="tiles">
-    <a href="/login" class="tile">→ Login</a>
+    <a href="/fahrtenbuch" class="tile">Fahrtenbuch</a>
+    <a href="/auftraege" class="tile">Auftragsmanagement</a>
+    <a href="/arbeitszeit" class="tile">Arbeitszeit</a>
+    <a href="/urlaub" class="tile">Urlaubsanträge</a>
+    <a href="/krankmeldung" class="tile">Krankmeldung</a>
+    <a href="/schichtplaner" class="tile">Schichtplaner</a>
+    <a href="/schulungen" class="tile">Schulungen</a>
+    <a href="/material" class="tile">Materialbestellungen</a>
+    <a href="/personal" class="tile">Personalmanagement</a>
   </div>
 
   <script type="module" src="/js/datetime.js"></script>
-  <script>
-    // Später: echter Name aus Supabase
-    document.getElementById('user-name').textContent = 'Gast';
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+    const supabase = createClient(
+      'https://zjcwgpfcdpvudageoipi.supabase.co',
+      'DEIN_ANON_KEY_HIER'
+    );
+
+    async function loadUserName() {
+      const {  { session } } = await supabase.auth.getSession();
+      if (!session) {
+        document.getElementById('user-name').textContent = 'Gast';
+        return;
+      }
+
+      const {  employee } = await supabase
+        .from('employees')
+        .select('first_name, last_name')
+        .eq('id', session.user.id)
+        .single();
+
+      if (employee) {
+        document.getElementById('user-name').textContent = 
+          `${employee.first_name} ${employee.last_name}`;
+      } else {
+        document.getElementById('user-name').textContent = 'Profil fehlt';
+      }
+    }
+
+    loadUserName();
   </script>
 </body>
 </html>
