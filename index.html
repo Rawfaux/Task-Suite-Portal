@@ -12,10 +12,9 @@
     <p id="datetime">Lädt...</p>
     <p>Kalenderwoche: <span id="calendar-week">–</span></p>
     
-<button id="logoutBtn" style="margin-top: 1rem; padding: 0.4rem; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; display: none;">
-  Abmelden
-</button>
-    
+    <button id="logoutBtn" style="margin-top: 1rem; padding: 0.4rem; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; display: none;">
+      Abmelden
+    </button>
   </header>
 
   <div class="tiles">
@@ -32,39 +31,54 @@
 
   <script type="module" src="/js/datetime.js"></script>
   <script type="module">
-  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-  const supabase = createClient(
-    'https://kphmtjtekbehvbuqmndz.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtwaG10anRla2JlaHZidXFtbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0MDc3NDEsImV4cCI6MjA3ODk4Mzc0MX0.P6dpB_jSEXE2jdF19tmv4pE-g3_EDFdTX_d74PUTz9U'
-  );
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+    const supabase = createClient(
+      'https://kphmtjtekbehvbuqmndz.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtwaG10anRla2JlaHZidXFtbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0MDc3NDEsImV4cCI6MjA3ODk4Mzc0MX0.P6dpB_jSEXE2jdF19tmv4pE-g3_EDFdTX_d74PUTz9U'
+    );
 
-  // 🔁 Warte kurz, damit Supabase den Token aus der URL verarbeiten kann
-  async function loadUserName() {
-    // Kleine Verzögerung, damit Auth-Callback abgeschlossen ist
-    await new Promise(r => setTimeout(r, 300));
-
-    const {  { session }, error } = await supabase.auth.getSession();
-    
-    if (error || !session) {
-      document.getElementById('user-name').textContent = 'Gast';
-      return;
+    // Logout-Funktion
+    async function logout() {
+      await supabase.auth.signOut();
+      location.reload();
     }
 
-    const {  employee } = await supabase
-      .from('employees')
-      .select('first_name, last_name')
-      .eq('id', session.user.id)
-      .single();
+    // Lade Benutzernamen – mit Verzögerung für Magic Link
+    async function loadUserName() {
+      // 🔑 Warte 300ms, damit Supabase den Token aus der URL verarbeiten kann
+      await new Promise(resolve => setTimeout(resolve, 300));
 
-    if (employee) {
-      document.getElementById('user-name').textContent = 
-        `${employee.first_name} ${employee.last_name}`;
-    } else {
-      document.getElementById('user-name').textContent = 'Profil fehlt';
+      const {  { session }, error: authError } = await supabase.auth.getSession();
+      const logoutBtn = document.getElementById('logoutBtn');
+
+      if (authError || !session) {
+        document.getElementById('user-name').textContent = 'Gast';
+        if (logoutBtn) logoutBtn.style.display = 'none';
+        return;
+      }
+
+      // Lade Profil aus employees
+      const {  employee, error: dbError } = await supabase
+        .from('employees')
+        .select('first_name, last_name')
+        .eq('id', session.user.id)
+        .single();
+
+      if (employee) {
+        document.getElementById('user-name').textContent = 
+          `${employee.first_name} ${employee.last_name}`;
+        if (logoutBtn) logoutBtn.style.display = 'inline-block';
+      } else {
+        document.getElementById('user-name').textContent = 'Profil fehlt';
+        if (logoutBtn) logoutBtn.style.display = 'inline-block';
+      }
     }
-  }
 
-  loadUserName();
-</script>
+    // Logout-Button verknüpfen
+    document.getElementById('logoutBtn').addEventListener('click', logout);
+
+    // Initialisieren
+    loadUserName();
+  </script>
 </body>
 </html>
