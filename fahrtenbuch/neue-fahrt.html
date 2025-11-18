@@ -92,7 +92,7 @@ document.getElementById('rideForm').addEventListener('submit', async (e) => {
   if (!session) return alert('Nicht eingeloggt.');
 
   const {  emp } = await supabase
-    .from('employees')
+    .from('employees_clean')
     .select('first_name, last_name')
     .eq('id', session.user.id)
     .single();
