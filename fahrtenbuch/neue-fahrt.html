@@ -86,63 +86,68 @@
     });
 
     // Speichern
-    document.getElementById('rideForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const {  { session } } = await supabase.auth.getSession();
-      if (!session) return alert('Nicht eingeloggt.');
+document.getElementById('rideForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const {  { session } } = await supabase.auth.getSession();
+  if (!session) return alert('Nicht eingeloggt.');
 
-      // Profil laden, um full_name zu erhalten
-      const {  emp } = await supabase
-        .from('employees')
-        .select('first_name, last_name')
-        .eq('id', session.user.id)
-        .single();
-      if (!emp) return alert('Kein Personalprofil – bitte zuerst anlegen.');
+  const {  emp } = await supabase
+    .from('employees')
+    .select('first_name, last_name')
+    .eq('id', session.user.id)
+    .single();
+  if (!emp) return alert('Kein Personalprofil.');
 
-      const departureAt = new Date(
-        document.getElementById('dateStart').value + 'T' +
-        document.getElementById('timeStart').value
-      );
+  const departureAt = new Date(
+    document.getElementById('dateStart').value + 'T' +
+    document.getElementById('timeStart').value
+  );
 
-      const ride = {
-        user_id: session.user.id,
-        full_name: `${emp.first_name} ${emp.last_name}`,
-        start_location: document.getElementById('startLocation').value,
-        destination: document.getElementById('destination').value,
-        km_start: parseFloat(document.getElementById('kmStart').value),
-        departure_at: departureAt.toISOString(),
-        status: 'pending'
-      };
+  const ride = {
+    user_id: session.user.id,
+    full_name: `${emp.first_name} ${emp.last_name}`,
+    start_location: document.getElementById('startLocation').value,
+    destination: document.getElementById('destination').value,
+    km_start: parseFloat(document.getElementById('kmStart').value),
+    departure_at: departureAt.toISOString(),
+    status: 'pending'
+  };
 
-      // 1. Fahrt-Datensatz erstellen
-      const {  newRide, error: rideError } = await supabase
-        .from('rides')
-        .insert(ride)
-        .select()
-        .single();
+  // 1. ERST den Datensatz speichern (ohne Foto)
+  const {  newRide, error: rideError } = await supabase
+    .from('rides')
+    .insert(ride)
+    .select()
+    .single();
 
-      if (rideError) return alert('Fahrt-Fehler: ' + rideError.message);
+  if (rideError) {
+    console.error('Datenbank-Fehler:', rideError);
+    return alert('Fahrt konnte nicht gespeichert werden: ' + rideError.message);
+  }
 
-      // 2. Foto hochladen
-      const photoFile = document.getElementById('photoInput').files[0];
-      const fileName = `rides/${newRide.id}/start.jpg`;
-      const { error: uploadError } = await supabase.storage
-        .from('ride-photos')
-        .upload(fileName, photoFile, { upsert: true });
+  // 2. Dann Foto versuchen
+  const photoFile = document.getElementById('photoInput').files[0];
+  if (photoFile) {
+    const fileName = `rides/${newRide.id}/start.jpg`;
+    const { error: uploadError } = await supabase.storage
+      .from('ride-photos')
+      .upload(fileName, photoFile, { upsert: true });
 
-      if (uploadError) return alert('Foto-Fehler: ' + uploadError.message);
-
+    if (uploadError) {
+      console.warn('Foto-Upload fehlgeschlagen:', uploadError);
+      alert('⚠️ Fahrt gespeichert, aber Foto-Upload fehlgeschlagen. Prüfe den Bucket "ride-photos".');
+    } else {
       // 3. Foto-URL im Datensatz speichern
-      const { error: updateError } = await supabase
+      await supabase
         .from('rides')
         .update({ photo_start_url: fileName })
         .eq('id', newRide.id);
+    }
+  }
 
-      if (updateError) return alert('Speichern fehlgeschlagen: ' + updateError.message);
-
-      alert('✅ Fahrt gespeichert! Status: „Warte auf Ankunft“');
-      window.location.href = '/fahrtenbuch';
-    });
+  alert('✅ Fahrt gespeichert!');
+  window.location.href = '/fahrtenbuch';
+});
   </script>
 </body>
 </html>
