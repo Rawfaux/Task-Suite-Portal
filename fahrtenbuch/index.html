@@ -116,19 +116,15 @@
         return;
       }
 
-      let html = `
-        <table>
-          <thead>
-            <tr>
-              <th>Datum</th>
-              <th>Fahrer</th>
-              <th>Start → Ziel</th>
-              <th>km-Start</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-      `;
+html += `
+  <tr onclick="window.location='/fahrtenbuch/fahrt.html?id=${ride.id}'" style="cursor:pointer;">
+    <td>${formatDateTime(ride.departure_at)}</td>
+    <td>${ride.full_name}</td>
+    <td>${ride.start_location} → ${ride.destination}</td>
+    <td>${ride.km_start || '–'}</td>
+    <td><span class="status ${ride.status}">${formatStatus(ride.status)}</span></td>
+  </tr>
+`;
 
       rides.forEach(ride => {
         html += `
