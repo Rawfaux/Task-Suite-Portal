@@ -63,7 +63,7 @@
     }
 
     const {  employee } = await supabase
-      .from('employees')
+      .from('employees_clean')
       .select('first_name, last_name')
       .eq('id', session.user.id)
       .single();
