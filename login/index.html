@@ -15,27 +15,27 @@
   <div id="msg"></div>
 
   <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-    const supabase = createClient(
-      'https://kphmtjtekbehvbuqmndz.supabase.co', // ← DEINE URL
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtwaG10anRla2JlaHZidXFtbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0MDc3NDEsImV4cCI6MjA3ODk4Mzc0MX0.P6dpB_jSEXE2jdF19tmv4pE-g3_EDFdTX_d74PUTz9U'                         // ← DEIN KEY
-    );
+  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+  const supabase = createClient(
+    'https://kphmtjtekbehvbuqmndz.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtwaG10anRla2JlaHZidXFtbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0MDc3NDEsImV4cCI6MjA3ODk4Mzc0MX0.P6dpB_jSEXE2jdF19tmv4pE-g3_EDFdTX_d74PUTz9U'
+  );
 
-    document.getElementById('loginForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const { error } = await supabase.auth.signInWithOtp({ email: e.target.email.value });
+  document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = e.target.email.value.trim(); // ✅ Email extrahieren
 
-const { error } = await supabase.auth.signInWithOtp({
-  email: email,
-  options: {
-    emailRedirectTo: 'https://task-suite-portal.vercel.app'
-  } 
+    const { error } = await supabase.auth.signInWithOtp({
+      email: email,
+      options: {
+        emailRedirectTo: 'https://task-suite-portal.vercel.app'
+      }
     });
 
-       document.getElementById('msg').textContent = error 
+    document.getElementById('msg').textContent = error 
       ? '❌ Fehler: ' + error.message 
       : '✅ Login-Link gesendet! Prüfe dein E-Mail.';
   });
-  </script>
+</script>
 </body>
 </html>
