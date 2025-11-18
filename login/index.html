@@ -25,6 +25,13 @@
       e.preventDefault();
       const { error } = await supabase.auth.signInWithOtp({ email: e.target.email.value });
       document.getElementById('msg').textContent = error ? 'Fehler: ' + error.message : 'Link gesendet!';
+
+const { error } = await supabase.auth.signInWithOtp({
+  email: email,
+  options: {
+    emailRedirectTo: 'https://task-suite-portal.vercel.app'
+  }
+      
     });
   </script>
 </body>
