@@ -24,7 +24,6 @@
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const { error } = await supabase.auth.signInWithOtp({ email: e.target.email.value });
-      document.getElementById('msg').textContent = error ? 'Fehler: ' + error.message : 'Link gesendet!';
 
 const { error } = await supabase.auth.signInWithOtp({
   email: email,
