@@ -11,12 +11,8 @@
     <h2>Willkommen, <span id="user-name">Gast</span></h2>
     <p id="datetime">Lädt...</p>
     <p>Kalenderwoche: <span id="calendar-week">–</span></p>
-    
-    <button id="logoutBtn" style="margin-top: 1rem; padding: 0.4rem; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; display: none;">
-      Abmelden
-    </button>
+    <button id="logoutBtn" style="margin-top:1rem;padding:0.4rem;background:#dc3545;color:white;border:none;border-radius:4px;display:none;">Abmelden</button>
   </header>
-
   <div class="tiles">
     <a href="/fahrtenbuch" class="tile">Fahrtenbuch</a>
     <a href="/auftraege" class="tile">Auftragsmanagement</a>
@@ -28,46 +24,28 @@
     <a href="/material" class="tile">Materialbestellungen</a>
     <a href="/personal" class="tile">Personalmanagement</a>
   </div>
-
   <script type="module" src="/js/datetime.js"></script>
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-    const supabase = createClient(
-      'https://kphmtjtekbehvbuqmndz.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtwaG10anRla2JlaHZidXFtbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0MDc3NDEsImV4cCI6MjA3ODk4Mzc0MX0.P6dpB_jSEXE2jdF19tmv4pE-g3_EDFdTX_d74PUTz9U'
-    );
-
+    const supabase = createClient('https://kphmtjtekbehvbuqmndz.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtwaG10anRla2JlaHZidXFtbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0MDc3NDEsImV4cCI6MjA3ODk4Mzc0MX0.P6dpB_jSEXE2jdF19tmv4pE-g3_EDFdTX_d74PUTz9U');
     async function init() {
       await new Promise(r => setTimeout(r, 300));
       const {  { session } } = await supabase.auth.getSession();
-      
       if (!session) {
-        // 🔑 WICHTIG: Leite zu /login um, wenn nicht eingeloggt
         window.location.href = '/login';
         return;
       }
-
       const userId = session.user.id;
-      const {  employee } = await supabase
-        .from('employees')
-        .select('first_name, last_name')
-        .eq('id', userId)
-        .single();
-
+      const {  employee } = await supabase.from('employees').select('first_name, last_name').eq('id', userId).single();
       const nameEl = document.getElementById('user-name');
-      if (employee) {
-        nameEl.textContent = `${employee.first_name} ${employee.last_name}`;
-      } else {
-        nameEl.textContent = 'Profil wird geladen...';
-      }
+      if (employee) nameEl.textContent = `${employee.first_name} ${employee.last_name}`;
+      else nameEl.textContent = 'Profil geladen';
       document.getElementById('logoutBtn').style.display = 'inline-block';
     }
-
     document.getElementById('logoutBtn').addEventListener('click', async () => {
       await supabase.auth.signOut();
       window.location.href = '/login';
     });
-
     init();
   </script>
 </body>
