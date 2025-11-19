@@ -69,7 +69,7 @@
       }
 
       const { error } = await supabase
-        .from('employees_clean')
+        .from('employees')
         .insert(profile)
         .select();
 
