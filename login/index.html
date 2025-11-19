@@ -1,41 +1,115 @@
-<!-- login/index.html -->
 <!DOCTYPE html>
-<html>
+<html lang="de">
 <head>
-  <meta charset="utf-8">
-  <title>Login</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login – TaskSuite</title>
   <link rel="stylesheet" href="/css/style.css">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #f8f9fa;
+      padding: 1rem;
+      max-width: 500px;
+      margin: 2rem auto;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+    form {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+    input[type="email"] {
+      width: 100%;
+      padding: 0.6rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    button {
+      width: 100%;
+      padding: 0.7rem;
+      background: #0d6efd;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-top: 1rem;
+    }
+    button:hover {
+      background: #0b5ed7;
+    }
+    #msg {
+      margin-top: 1rem;
+      padding: 0.7rem;
+      border-radius: 4px;
+      text-align: center;
+    }
+    .status-success { background: #d4edda; color: #155724; }
+    .status-error { background: #f8d7da; color: #721c24; }
+    .back-link {
+      display: inline-block;
+      margin-top: 1rem;
+      color: #0d6efd;
+      text-decoration: none;
+    }
+  </style>
 </head>
 <body>
-  <h2>Login</h2>
+  <h2>🔐 TaskSuite Login</h2>
   <form id="loginForm">
-    <input type="email" id="email" placeholder="deine@email.de" required />
-    <button type="submit">Login-Link senden</button>
+    <label for="email">E-Mail-Adresse</label>
+    <input type="email" id="email" name="email" placeholder="dein.name@firma.de" required />
+
+    <button type="submit">Magic Link senden</button>
   </form>
   <div id="msg"></div>
+  <a href="/" class="back-link">← Zurück zum Portal</a>
 
   <script type="module">
-  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-  const supabase = createClient(
-    'https://kphmtjtekbehvbuqmndz.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtwaG10anRla2JlaHZidXFtbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0MDc3NDEsImV4cCI6MjA3ODk4Mzc0MX0.P6dpB_jSEXE2jdF19tmv4pE-g3_EDFdTX_d74PUTz9U'
-  );
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+    const supabase = createClient(
+      'https://kphmtjtekbehvbuqmndz.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtwaG10anRla2JlaHZidXFtbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0MDc3NDEsImV4cCI6MjA3ODk4Mzc0MX0.P6dpB_jSEXE2jdF19tmv4pE-g3_EDFdTX_d74PUTz9U'
+    );
 
-  document.getElementById('loginForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = e.target.email.value.trim(); // ✅ Email extrahieren
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = e.target.email.value.trim().toLowerCase();
+      const msgEl = document.getElementById('msg');
 
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email,
-      options: {
-        emailRedirectTo: 'https://task-suite-portal.vercel.app'
+      // ✅ Sende Magic Link – unabhängig davon, ob Nutzer existiert
+      const { error } = await supabase.auth.signInWithOtp({
+        email: email,
+        options: {
+          // Wichtig: exakt diese Domain, wie in Supabase URL Configuration
+          emailRedirectTo: 'https://task-suite-portal.vercel.app'
+        }
+      });
+
+      if (error) {
+        msgEl.textContent = '❌ Fehler: Magic Link konnte nicht gesendet werden.';
+        msgEl.className = 'status-error';
+        console.error('Login-Fehler:', error);
+      } else {
+        // 🔒 DSGVO-konform: Immer dieselbe Erfolgsmeldung!
+        msgEl.textContent = '✅ Magic Link wird gesendet – prüfe dein E-Mail-Postfach.';
+        msgEl.className = 'status-success';
+        
+        // 🔧 Optional: Für Admin-Logging (nicht im UI anzeigen!)
+        console.log('ℹ️ Magic Link angefordert für:', email);
       }
     });
-
-    document.getElementById('msg').textContent = error 
-      ? '❌ Fehler: ' + error.message 
-      : '✅ Login-Link gesendet! Prüfe dein E-Mail.';
-  });
-</script>
+  </script>
 </body>
 </html>
