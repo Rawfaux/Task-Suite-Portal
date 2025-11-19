@@ -27,64 +27,78 @@
   <script type="module" src="/js/datetime.js"></script>
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-    const supabase = createClient('https://kphmtjtekbehvbuqmndz.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtwaG10anRla2JlaHZidXFtbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0MDc3NDEsImV4cCI6MjA3ODk4Mzc0MX0.P6dpB_jSEXE2jdF19tmv4pE-g3_EDFdTX_d74PUTz9U');
+    const supabase = createClient(
+      'https://kphmtjtekbehvbuqmndz.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtwaG10anRla2JlaHZidXFtbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0MDc3NDEsImV4cCI6MjA3ODk4Mzc0MX0.P6dpB_jSEXE2jdF19tmv4pE-g3_EDFdTX_d74PUTz9U'
+    );
+
     async function init() {
-  await new Promise(r => setTimeout(r, 300));
+      // Warte, damit Magic Link verarbeitet wird
+      await new Promise(r => setTimeout(r, 300));
 
-  // 🔑 Korrekte Session-Abfrage für Supabase v2+
-  const { data, error } = await supabase.auth.getSession();
-  const session = data?.session;
+      // Session abrufen
+      const { data, error: authError } = await supabase.auth.getSession();
+      const session = data?.session;
 
-  if (error || !session) {
-    window.location.href = '/login';
-    return;
-  }
+      if (authError || !session) {
+        window.location.href = '/login';
+        return;
+      }
 
-  const userId = session.user.id;
-  const nameEl = document.getElementById('user-name');
+      const userId = session.user.id;
+      const email = session.user.email;
+      const nameEl = document.getElementById('user-name');
+      const logoutBtn = document.getElementById('logoutBtn');
 
-  // Profil prüfen
-  const {  employee, error: fetchError } = await supabase
-  .from('employees')
-  .select('first_name, last_name')
-  .eq('id', userId)
-  .single();
+      // Profil aus employees laden
+      const {  employee, error: dbError } = await supabase
+        .from('employees')
+        .select('first_name, last_name')
+        .eq('id', userId)
+        .single();
 
-console.log('Profil-Abfrage:', { employee, fetchError });
+      if (dbError?.code === 'PGRST116') {
+        // ➕ NEUER NUTZER: Profil anlegen
+        console.log('🆕 Kein Profil gefunden – lege neues Profil an...');
 
-if (fetchError) {
-  console.log('Fehlercode:', fetchError.code, 'Nachricht:', fetchError.message);
-}
+        const base = email.split('@')[0].replace(/[._-]/g, ' ');
+        const words = base.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+        const firstName = words[0] || 'Nutzer';
+        const lastName = words.slice(1).join(' ') || '–';
+        const personalNumber = `TMP-${userId.substring(0, 6).toUpperCase()}`;
 
-if (fetchError?.code === 'PGRST116') {
-  // ➕ Profil anlegen (wie vorher)
-  const email = session.user.email;
-  const base = email.split('@')[0].replace(/[._-]/g, ' ');
-  const words = base.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
-  const firstName = words[0] || 'Nutzer';
-  const lastName = words.slice(1).join(' ') || '–';
+        const { error: insertError } = await supabase.from('employees').insert({
+          id: userId,
+          first_name: firstName,
+          last_name: lastName,
+          personal_number: personalNumber,
+          role: 'technician'
+        });
 
-  await supabase.from('employees').insert({
-    id: userId,
-    first_name: firstName,
-    last_name: lastName,
-    personal_number: `TMP-${userId.substring(0, 6).toUpperCase()}`,
-    role: 'technician'
-  });
+        if (insertError) {
+          console.error('❌ Profil-Erstellung fehlgeschlagen:', insertError);
+          nameEl.textContent = 'Fehler: Profil';
+        } else {
+          console.log('✅ Profil erfolgreich in employees angelegt!');
+          nameEl.textContent = `${firstName} ${lastName}`;
+        }
+      } else if (employee) {
+        // ✅ BESTEHENDER NUTZER
+        nameEl.textContent = `${employee.first_name} ${employee.last_name}`;
+      } else {
+        nameEl.textContent = 'Profil-Fehler';
+      }
 
-  nameEl.textContent = `${firstName} ${lastName}`;
-} else if (employee) {
-  nameEl.textContent = `${employee.first_name} ${employee.last_name}`;
-} else {
-  nameEl.textContent = 'Profil fehlt';
-}
+      logoutBtn.style.display = 'inline-block';
+    }
 
-  document.getElementById('logoutBtn').style.display = 'inline-block';
-}
-    document.getElementById('logoutBtn').addEventListener('click', async () => {
+    // Logout-Funktion
+    document.getElementById('logoutBtn')?.addEventListener('click', async () => {
       await supabase.auth.signOut();
       window.location.href = '/login';
     });
+
+    // Start
     init();
   </script>
 </body>
