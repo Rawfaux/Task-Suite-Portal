@@ -44,34 +44,40 @@
   const nameEl = document.getElementById('user-name');
 
   // Profil prüfen
-  const { data: profileData, error: fetchError } = await supabase
-    .from('employees')
-    .select('first_name, last_name')
-    .eq('id', userId)
-    .single();
+  const {  employee, error: fetchError } = await supabase
+  .from('employees')
+  .select('first_name, last_name')
+  .eq('id', userId)
+  .single();
 
-  if (fetchError?.code === 'PGRST116') {
-    // ➕ Neuer Nutzer → Profil anlegen
-    const email = session.user.email;
-    const base = email.split('@')[0].replace(/[._-]/g, ' ');
-    const words = base.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
-    const firstName = words[0] || 'Nutzer';
-    const lastName = words.slice(1).join(' ') || '–';
+console.log('Profil-Abfrage:', { employee, fetchError });
 
-    await supabase.from('employees').insert({
-      id: userId,
-      first_name: firstName,
-      last_name: lastName,
-      personal_number: `TMP-${userId.substring(0, 6).toUpperCase()}`,
-      role: 'technician'
-    });
+if (fetchError) {
+  console.log('Fehlercode:', fetchError.code, 'Nachricht:', fetchError.message);
+}
 
-    nameEl.textContent = `${firstName} ${lastName}`;
-  } else if (profileData) {
-    nameEl.textContent = `${profileData.first_name} ${profileData.last_name}`;
-  } else {
-    nameEl.textContent = 'Profil fehlt';
-  }
+if (fetchError?.code === 'PGRST116') {
+  // ➕ Profil anlegen (wie vorher)
+  const email = session.user.email;
+  const base = email.split('@')[0].replace(/[._-]/g, ' ');
+  const words = base.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+  const firstName = words[0] || 'Nutzer';
+  const lastName = words.slice(1).join(' ') || '–';
+
+  await supabase.from('employees').insert({
+    id: userId,
+    first_name: firstName,
+    last_name: lastName,
+    personal_number: `TMP-${userId.substring(0, 6).toUpperCase()}`,
+    role: 'technician'
+  });
+
+  nameEl.textContent = `${firstName} ${lastName}`;
+} else if (employee) {
+  nameEl.textContent = `${employee.first_name} ${employee.last_name}`;
+} else {
+  nameEl.textContent = 'Profil fehlt';
+}
 
   document.getElementById('logoutBtn').style.display = 'inline-block';
 }
