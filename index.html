@@ -30,8 +30,12 @@
     const supabase = createClient('https://kphmtjtekbehvbuqmndz.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtwaG10anRla2JlaHZidXFtbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0MDc3NDEsImV4cCI6MjA3ODk4Mzc0MX0.P6dpB_jSEXE2jdF19tmv4pE-g3_EDFdTX_d74PUTz9U');
     async function init() {
   await new Promise(r => setTimeout(r, 300));
-  const {  { session } } = await supabase.auth.getSession();
-  if (!session) {
+
+  // 🔑 Korrekte Session-Abfrage für Supabase v2+
+  const { data, error } = await supabase.auth.getSession();
+  const session = data?.session;
+
+  if (error || !session) {
     window.location.href = '/login';
     return;
   }
@@ -39,15 +43,15 @@
   const userId = session.user.id;
   const nameEl = document.getElementById('user-name');
 
-  // 🔑 Wichtig: Hole BEIDE Werte: data UND error
-  const {  employee, error: fetchError } = await supabase
+  // Profil prüfen
+  const { data: profileData, error: fetchError } = await supabase
     .from('employees')
     .select('first_name, last_name')
     .eq('id', userId)
     .single();
 
   if (fetchError?.code === 'PGRST116') {
-    // ➕ NEUER NUTZER → Profil anlegen
+    // ➕ Neuer Nutzer → Profil anlegen
     const email = session.user.email;
     const base = email.split('@')[0].replace(/[._-]/g, ' ');
     const words = base.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
@@ -63,9 +67,8 @@
     });
 
     nameEl.textContent = `${firstName} ${lastName}`;
-  } else if (employee) {
-    // ✅ BESTEHENDER NUTZER
-    nameEl.textContent = `${employee.first_name} ${employee.last_name}`;
+  } else if (profileData) {
+    nameEl.textContent = `${profileData.first_name} ${profileData.last_name}`;
   } else {
     nameEl.textContent = 'Profil fehlt';
   }
