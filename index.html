@@ -37,73 +37,37 @@
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtwaG10anRla2JlaHZidXFtbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0MDc3NDEsImV4cCI6MjA3ODk4Mzc0MX0.P6dpB_jSEXE2jdF19tmv4pE-g3_EDFdTX_d74PUTz9U'
     );
 
-    // Hilfsfunktion: Namen aus E-Mail generieren
-    function generateNameFromEmail(email) {
-      const base = email.split('@')[0].replace(/[._-]/g, ' ');
-      const words = base.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
-      const firstName = words[0] || 'Nutzer';
-      const lastName = words.slice(1).join(' ') || '–';
-      return { firstName, lastName };
-    }
-
-    // Logout-Funktion
-    async function logout() {
-      await supabase.auth.signOut();
-      window.location.href = '/login';
-    }
-
-    // Haupt-Initialisierung
     async function init() {
-      // 🔑 Warte kurz, damit Magic Link verarbeitet wird
       await new Promise(r => setTimeout(r, 300));
-
       const {  { session } } = await supabase.auth.getSession();
-
-      // 🔒 Keine Session? → Redirect zu Login
+      
       if (!session) {
+        // 🔑 WICHTIG: Leite zu /login um, wenn nicht eingeloggt
         window.location.href = '/login';
         return;
       }
 
-      // 👤 Session vorhanden → Profil laden oder erstellen
       const userId = session.user.id;
-      const email = session.user.email;
-
-      const {  employee, error: fetchError } = await supabase
+      const {  employee } = await supabase
         .from('employees')
         .select('first_name, last_name')
         .eq('id', userId)
         .single();
 
       const nameEl = document.getElementById('user-name');
-      const logoutBtn = document.getElementById('logoutBtn');
-
-      if (fetchError?.code === 'PGRST116') {
-        // ➕ Neuer Nutzer → Profil anlegen
-        const { firstName, lastName } = generateNameFromEmail(email);
-        await supabase.from('employees').insert({
-          id: userId,
-          first_name: firstName,
-          last_name: lastName,
-          personal_number: `TMP-${userId.substring(0, 6).toUpperCase()}`,
-          role: 'technician'
-        });
-        nameEl.textContent = `${firstName} ${lastName}`;
-      } else if (employee) {
-        // ✅ Bestehender Nutzer
+      if (employee) {
         nameEl.textContent = `${employee.first_name} ${employee.last_name}`;
       } else {
-        nameEl.textContent = 'Profil fehlt';
+        nameEl.textContent = 'Profil wird geladen...';
       }
-
-      // Logout aktivieren
-      logoutBtn.style.display = 'inline-block';
+      document.getElementById('logoutBtn').style.display = 'inline-block';
     }
 
-    // Logout-Button verknüpfen
-    document.getElementById('logoutBtn').addEventListener('click', logout);
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      window.location.href = '/login';
+    });
 
-    // Start
     init();
   </script>
 </body>
