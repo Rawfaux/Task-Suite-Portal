@@ -55,7 +55,7 @@
 
       // Profil laden
       const {  employee, error } = await supabase
-        .from('employees_clean')
+        .from('employees')
         .select('*')
         .eq('id', session.user.id)
         .single();
