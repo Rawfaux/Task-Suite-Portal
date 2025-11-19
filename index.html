@@ -46,75 +46,65 @@
       return { firstName, lastName };
     }
 
-    // Logout
+    // Logout-Funktion
     async function logout() {
       await supabase.auth.signOut();
-      location.reload();
+      window.location.href = '/login';
     }
 
-    // Hauptfunktion: Session prüfen + Profil ggf. erstellen
-    async function initializeUser() {
-      // 🔑 Warte, damit Magic Link-Token verarbeitet wird
+    // Haupt-Initialisierung
+    async function init() {
+      // 🔑 Warte kurz, damit Magic Link verarbeitet wird
       await new Promise(r => setTimeout(r, 300));
 
-      const {  { session }, error: authError } = await supabase.auth.getSession();
-      const logoutBtn = document.getElementById('logoutBtn');
-      const nameEl = document.getElementById('user-name');
+      const {  { session } } = await supabase.auth.getSession();
 
-      if (authError || !session) {
-        nameEl.textContent = 'Gast';
-        logoutBtn.style.display = 'none';
-        console.log('ℹ️ Keine Session – zeige "Gast"');
+      // 🔒 Keine Session? → Redirect zu Login
+      if (!session) {
+        window.location.href = '/login';
         return;
       }
 
+      // 👤 Session vorhanden → Profil laden oder erstellen
       const userId = session.user.id;
       const email = session.user.email;
 
-      // Prüfe, ob Profil existiert
       const {  employee, error: fetchError } = await supabase
         .from('employees')
         .select('first_name, last_name')
         .eq('id', userId)
         .single();
 
-      if (fetchError?.code === 'PGRST116') {
-        // ➕ Profil existiert NICHT → lege es an
-        console.log('🆕 Kein Profil gefunden – lege neues Profil an...');
-        const { firstName, lastName } = generateNameFromEmail(email);
-        const personalNumber = `TMP-${userId.substring(0, 6).toUpperCase()}`;
+      const nameEl = document.getElementById('user-name');
+      const logoutBtn = document.getElementById('logoutBtn');
 
-        const { error: insertError } = await supabase.from('employees').insert({
+      if (fetchError?.code === 'PGRST116') {
+        // ➕ Neuer Nutzer → Profil anlegen
+        const { firstName, lastName } = generateNameFromEmail(email);
+        await supabase.from('employees').insert({
           id: userId,
           first_name: firstName,
           last_name: lastName,
-          personal_number: personalNumber,
+          personal_number: `TMP-${userId.substring(0, 6).toUpperCase()}`,
           role: 'technician'
         });
-
-        if (insertError) {
-          console.error('❌ Profil-Erstellung fehlgeschlagen:', insertError.message);
-          nameEl.textContent = 'Fehler: Profil';
-        } else {
-          console.log('✅ Profil angelegt für:', email);
-          nameEl.textContent = `${firstName} ${lastName}`;
-          logoutBtn.style.display = 'inline-block';
-        }
+        nameEl.textContent = `${firstName} ${lastName}`;
       } else if (employee) {
-        // ✅ Profil existiert → zeige Namen
+        // ✅ Bestehender Nutzer
         nameEl.textContent = `${employee.first_name} ${employee.last_name}`;
-        logoutBtn.style.display = 'inline-block';
       } else {
         nameEl.textContent = 'Profil fehlt';
-        logoutBtn.style.display = 'inline-block';
       }
+
+      // Logout aktivieren
+      logoutBtn.style.display = 'inline-block';
     }
 
     // Logout-Button verknüpfen
     document.getElementById('logoutBtn').addEventListener('click', logout);
 
     // Start
-    initializeUser();
+    init();
   </script>
 </body>
 </html>
