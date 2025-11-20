@@ -26,23 +26,23 @@
   </div>
   <script type="module" src="/js/datetime.js"></script>
   <script>
-    // Session prüfen
-    const sessionStr = localStorage.getItem('taskSuiteSession');
-    const session = sessionStr ? JSON.parse(sessionStr) : null;
-    
-    if (!session || !session.isLoggedIn) {
-      window.location.href = '/login';
-    } else {
-      // Name anzeigen
-      document.getElementById('user-name').textContent = session.user.full_name;
-      document.getElementById('logoutBtn').style.display = 'inline-block';
+  // Session prüfen
+  const sessionStr = localStorage.getItem('taskSuiteSession');
+  const session = sessionStr ? JSON.parse(sessionStr) : null;
+  
+  if (!session || !session.isLoggedIn) {
+    window.location.href = '/login';
+  } else {
+    // Name anzeigen
+    document.getElementById('user-name').textContent = session.user.full_name;
+    document.getElementById('logoutBtn').style.display = 'inline-block';
 
-      // Logout-Funktion
-      document.getElementById('logoutBtn').addEventListener('click', () => {
-        localStorage.removeItem('taskSuiteSession');
-        window.location.href = '/login';
-      });
-    }
+    // Logout-Funktion
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      localStorage.removeItem('taskSuiteSession');
+      window.location.href = '/login';
+    });
+  }
   </script>
 </body>
 </html>
