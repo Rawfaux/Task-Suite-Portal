@@ -59,10 +59,19 @@
       color: #0d6efd;
       text-decoration: none;
     }
+    #error {
+      color: #dc3545;
+      background: #f8d7da;
+      padding: 0.75rem;
+      border-radius: 4px;
+      margin: 1rem 0;
+      display: none;
+    }
   </style>
 </head>
 <body>
   <h2>🔧 TaskSuite Login</h2>
+  <div id="error"></div>
   <form id="loginForm">
     <label for="firstName">Vorname</label>
     <input type="text" id="firstName" name="firstName" placeholder="Max" required>
@@ -81,15 +90,24 @@
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtwaG10anRla2JlaHZidXFtbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0MDc3NDEsImV4cCI6MjA3ODk4Mzc0MX0.P6dpB_jSEXE2jdF19tmv4pE-g3_EDFdTX_d74PUTz9U'
     );
 
+    // Einfache UUID-Generierung (v4)
+    function generateUUID() {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    }
+
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const firstName = e.target.firstName.value.trim();
       const lastName = e.target.lastName.value.trim();
       const fullName = `${firstName} ${lastName}`;
+      const errorEl = document.getElementById('error');
 
       try {
-        // Zufällige ID generieren (da wir keine echte Auth haben)
-        const userId = 'user_' + Math.random().toString(36).substr(2, 9);
+        // Korrekte UUID generieren
+        const userId = generateUUID();
         
         // Profil in employees anlegen
         const { error: insertError } = await supabase.from('employees').upsert({
@@ -100,7 +118,11 @@
           role: 'technician'
         }, { onConflict: 'id' });
 
-        if (insertError) throw insertError;
+        if (insertError) {
+          errorEl.textContent = `Datenbank-Fehler: ${insertError.message}`;
+          errorEl.style.display = 'block';
+          throw insertError;
+        }
 
         // Session im localStorage speichern
         localStorage.setItem('taskSuiteSession', JSON.stringify({
@@ -116,7 +138,8 @@
         // Weiter zum Dashboard
         window.location.href = '/dashboard';
       } catch (err) {
-        alert(`❌ Fehler beim Anmelden: ${err.message || 'Unbekannter Fehler'}`);
+        errorEl.textContent = `❌ Fehler beim Anmelden: ${err.message || 'Unbekannter Fehler'}`;
+        errorEl.style.display = 'block';
         console.error('Login-Fehler:', err);
       }
     });
