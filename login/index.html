@@ -29,13 +29,14 @@
       font-weight: 600;
       color: #495057;
     }
-    input[type="email"] {
+    input {
       width: 100%;
       padding: 0.6rem;
       border: 1px solid #ddd;
       border-radius: 4px;
       box-sizing: border-box;
       font-size: 1rem;
+      margin-bottom: 1rem;
     }
     button {
       width: 100%;
@@ -52,14 +53,6 @@
     button:hover {
       background: #0b5ed7;
     }
-    #status {
-      margin-top: 1rem;
-      padding: 0.7rem;
-      border-radius: 4px;
-      text-align: center;
-    }
-    .success { background: #d4edda; color: #155724; }
-    .error { background: #f8d7da; color: #721c24; }
     .back-link {
       display: inline-block;
       margin-top: 1rem;
@@ -69,13 +62,16 @@
   </style>
 </head>
 <body>
-  <h2>🔐 TaskSuite Login</h2>
+  <h2>🔧 TaskSuite Login</h2>
   <form id="loginForm">
-    <label for="email">E-Mail-Adresse</label>
-    <input type="email" id="email" name="email" placeholder="dein.name@firma.de" required />
-    <button type="submit">Magic Link senden</button>
+    <label for="firstName">Vorname</label>
+    <input type="text" id="firstName" name="firstName" placeholder="Max" required>
+    
+    <label for="lastName">Nachname</label>
+    <input type="text" id="lastName" name="lastName" placeholder="Mustermann" required>
+    
+    <button type="submit">Anmelden</button>
   </form>
-  <div id="status"></div>
   <a href="/" class="back-link">← Zurück zum Portal</a>
 
   <script type="module">
@@ -87,24 +83,40 @@
 
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const email = e.target.email.value.trim().toLowerCase();
-      const statusEl = document.getElementById('status');
+      const firstName = e.target.firstName.value.trim();
+      const lastName = e.target.lastName.value.trim();
+      const fullName = `${firstName} ${lastName}`;
 
       try {
-        const { error } = await supabase.auth.signInWithOtp({
-          email: email,
-          options: {
-            emailRedirectTo: 'https://task-suite-portal.vercel.app/dashboard'
-          }
-        });
+        // Zufällige ID generieren (da wir keine echte Auth haben)
+        const userId = 'user_' + Math.random().toString(36).substr(2, 9);
+        
+        // Profil in employees anlegen
+        const { error: insertError } = await supabase.from('employees').upsert({
+          id: userId,
+          first_name: firstName,
+          last_name: lastName,
+          personal_number: `TMP-${Date.now().toString().slice(-6)}`,
+          role: 'technician'
+        }, { onConflict: 'id' });
 
-        if (error) throw error;
+        if (insertError) throw insertError;
 
-        statusEl.className = 'success';
-        statusEl.textContent = '✅ Magic Link wird gesendet – prüfe dein E-Mail-Postfach.';
+        // Session im localStorage speichern
+        localStorage.setItem('taskSuiteSession', JSON.stringify({
+          user: {
+            id: userId,
+            first_name: firstName,
+            last_name: lastName,
+            full_name: fullName
+          },
+          isLoggedIn: true
+        }));
+
+        // Weiter zum Dashboard
+        window.location.href = '/dashboard';
       } catch (err) {
-        statusEl.className = 'error';
-        statusEl.textContent = `❌ Fehler: ${err.message || 'Login fehlgeschlagen'}`;
+        alert(`❌ Fehler beim Anmelden: ${err.message || 'Unbekannter Fehler'}`);
         console.error('Login-Fehler:', err);
       }
     });
