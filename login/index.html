@@ -81,68 +81,85 @@
     
     <button type="submit">Anmelden</button>
   </form>
-  <a href="/" class="back-link">← Zurück zum Portal</a>
-
+  
   <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-    const supabase = createClient(
-      'https://kphmtjtekbehvbuqmndz.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtwaG10anRla2JlaHZidXFtbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0MDc3NDEsImV4cCI6MjA3ODk4Mzc0MX0.P6dpB_jSEXE2jdF19tmv4pE-g3_EDFdTX_d74PUTz9U'
-    );
+  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+  const supabase = createClient(
+    'https://kphmtjtekbehvbuqmndz.supabase.co',
+    'dein-anon-key'
+  );
 
-    // Einfache UUID-Generierung
-    function generateUUID() {
-      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-      });
-    }
+  // Prüfe, ob Benutzer bereits existiert (basierend auf Name)
+  async function findExistingUser(firstName, lastName) {
+    const {  users, error } = await supabase
+      .from('employees')
+      .select('*')
+      .eq('first_name', firstName)
+      .eq('last_name', lastName)
+      .limit(1);
+    
+    return users?.[0] || null;
+  }
 
-    document.getElementById('loginForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const firstName = e.target.firstName.value.trim();
-      const lastName = e.target.lastName.value.trim();
-      const fullName = `${firstName} ${lastName}`;
-      const errorEl = document.getElementById('error');
+  // Generiere eine eindeutige ID basierend auf dem Namen
+  function generateUserId(firstName, lastName) {
+    const name = `${firstName.toLowerCase()}-${lastName.toLowerCase()}`;
+    return name.replace(/[^a-z0-9-]/g, '');
+  }
 
-      try {
-        // UUID generieren
-        const userId = generateUUID();
+  document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const firstName = e.target.firstName.value.trim();
+    const lastName = e.target.lastName.value.trim();
+    const fullName = `${firstName} ${lastName}`;
+    const errorEl = document.getElementById('error');
+
+    try {
+      // 1. Prüfe, ob Benutzer bereits existiert
+      const existingUser = await findExistingUser(firstName, lastName);
+      
+      let userId, personalNumber;
+      
+      if (existingUser) {
+        // ✅ Benutzer existiert – nutze bestehende Daten
+        userId = existingUser.id;
+        personalNumber = existingUser.personal_number;
+      } else {
+        // ➕ Neuer Benutzer – lege an
+        userId = generateUserId(firstName, lastName);
+        personalNumber = `TMP-${Date.now().toString().slice(-6)}`;
         
-        // Profil in employees anlegen
         const { error: insertError } = await supabase.from('employees').insert({
           id: userId,
           first_name: firstName,
           last_name: lastName,
-          personal_number: `TMP-${Date.now().toString().slice(-6)}`,
+          personal_number: personalNumber,
           role: 'technician'
         });
 
-        if (insertError) {
-          errorEl.textContent = `Datenbank-Fehler: ${insertError.message}`;
-          errorEl.style.display = 'block';
-          throw insertError;
-        }
-
-        // Session im localStorage speichern
-        localStorage.setItem('taskSuiteSession', JSON.stringify({
-          user: {
-            id: userId,
-            first_name: firstName,
-            last_name: lastName,
-            full_name: fullName
-          },
-          isLoggedIn: true
-        }));
-
-        // Weiter zum Dashboard
-        window.location.href = '/dashboard';
-      } catch (err) {
-        errorEl.textContent = `❌ Fehler beim Anmelden: ${err.message || 'Unbekannter Fehler'}`;
-        errorEl.style.display = 'block';
-        console.error('Login-Fehler:', err);
+        if (insertError) throw insertError;
       }
-    });
-  </script>
+
+      // 2. Session speichern
+      localStorage.setItem('taskSuiteSession', JSON.stringify({
+        user: {
+          id: userId,
+          first_name: firstName,
+          last_name: lastName,
+          full_name: fullName,
+          personal_number: personalNumber
+        },
+        isLoggedIn: true
+      }));
+
+      // 3. Zum Dashboard weiterleiten
+      window.location.href = '/dashboard';
+    } catch (err) {
+      errorEl.textContent = `❌ Fehler: ${err.message || 'Unbekannter Fehler'}`;
+      errorEl.style.display = 'block';
+      console.error('Login-Fehler:', err);
+    }
+  });
+</script>
 </body>
 </html>
