@@ -90,7 +90,7 @@
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtwaG10anRla2JlaHZidXFtbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0MDc3NDEsImV4cCI6MjA3ODk4Mzc0MX0.P6dpB_jSEXE2jdF19tmv4pE-g3_EDFdTX_d74PUTz9U'
     );
 
-    // Einfache UUID-Generierung (v4)
+    // Einfache UUID-Generierung
     function generateUUID() {
       return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
         var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
@@ -106,17 +106,17 @@
       const errorEl = document.getElementById('error');
 
       try {
-        // Korrekte UUID generieren
+        // UUID generieren
         const userId = generateUUID();
         
         // Profil in employees anlegen
-        const { error: insertError } = await supabase.from('employees').upsert({
+        const { error: insertError } = await supabase.from('employees').insert({
           id: userId,
           first_name: firstName,
           last_name: lastName,
           personal_number: `TMP-${Date.now().toString().slice(-6)}`,
           role: 'technician'
-        }, { onConflict: 'id' });
+        });
 
         if (insertError) {
           errorEl.textContent = `Datenbank-Fehler: ${insertError.message}`;
