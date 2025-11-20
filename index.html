@@ -5,6 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>TaskSuite Portal</title>
   <link rel="stylesheet" href="/css/style.css">
+  <style>
+    #debug {
+      margin: 1rem;
+      padding: 0.5rem;
+      background: #e7f3ff;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      display: none;
+    }
+  </style>
 </head>
 <body>
   <header>
@@ -24,7 +35,7 @@
     <a href="/material" class="tile">Materialbestellungen</a>
     <a href="/personal" class="tile">Personalmanagement</a>
   </div>
-  <div id="debug" style="margin:1rem;padding:0.5rem;background:#e7f3ff;border-radius:4px;display:none;font-family:monospace;"></div>
+  <div id="debug"></div>
   <script type="module" src="/js/datetime.js"></script>
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
@@ -34,84 +45,101 @@
     );
 
     const debugEl = document.getElementById('debug');
+    let lastRefresh = 0;
+
+    // Session alle 30 Minuten automatisch erneuern
+    function setupAutoRefresh() {
+      setInterval(async () => {
+        if (Date.now() - lastRefresh > 1800000) { // 30 Minuten
+          debugEl.textContent += '\n🔄 Session wird erneuert...';
+          await supabase.auth.getSession();
+          lastRefresh = Date.now();
+        }
+      }, 600000); // Alle 10 Minuten prüfen
+    }
+
+    async function loadProfileWithRetry(maxAttempts = 3, delay = 1000) {
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          debugEl.textContent += `\n🔍 Versuch ${attempt}/${maxAttempts} Profil zu laden...`;
+          
+          const {  { session } } = await supabase.auth.getSession();
+          
+          if (!session) {
+            debugEl.textContent += '\n❌ Keine Session – leite zu Login um';
+            window.location.href = '/login';
+            return;
+          }
+
+          const userId = session.user.id;
+          const {  employee, error: dbError } = await supabase
+            .from('employees')
+            .select('first_name, last_name')
+            .eq('id', userId)
+            .single();
+
+          if (dbError?.code === 'PGRST116') {
+            debugEl.textContent += '\n🆕 Lege neues Profil an...';
+            const email = session.user.email;
+            const base = email.split('@')[0].replace(/[._-]/g, ' ');
+            const words = base.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+            const firstName = words[0] || 'Nutzer';
+            const lastName = words.slice(1).join(' ') || '–';
+            
+            const { error: insertError } = await supabase.from('employees').insert({
+              id: userId,
+              first_name: firstName,
+              last_name: lastName,
+              personal_number: `TMP-${userId.substring(0, 6).toUpperCase()}`,
+              role: 'technician'
+            });
+
+            if (insertError) {
+              debugEl.textContent += `\n❌ INSERT fehlgeschlagen: ${insertError.message}`;
+              throw insertError;
+            }
+            
+            debugEl.textContent += `\n✅ Profil angelegt für ${firstName} ${lastName}`;
+            return { firstName, lastName };
+          } else if (employee) {
+            debugEl.textContent += `\n✅ Profil geladen: ${employee.first_name} ${employee.last_name}`;
+            return employee;
+          } else {
+            debugEl.textContent += '\n❌ Unerwarteter Fehler beim Profil-Laden';
+            throw new Error('Profil-Fehler');
+          }
+        } catch (err) {
+          debugEl.textContent += `\n⚠️ Fehler im ${attempt}. Versuch: ${err.message || err}`;
+          if (attempt === maxAttempts) {
+            debugEl.textContent += '\n❌ Max. Versuche erreicht – leite zu Login um';
+            window.location.href = '/login';
+            return null;
+          }
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
 
     async function init() {
       debugEl.style.display = 'block';
-      debugEl.textContent = '🔍 Starte Initialisierung...';
-
-      // Warte, damit Magic Link verarbeitet wird
-      await new Promise(r => setTimeout(r, 500));
-      debugEl.textContent += '\n⏳ Wartezeit abgeschlossen';
-
-      // Session laden
-      const { data, error: authError } = await supabase.auth.getSession();
-      const session = data?.session;
+      debugEl.textContent = '🚀 Initialisierung gestartet...';
       
-      debugEl.textContent += `\nSession: ${session ? 'gefunden' : 'nicht gefunden'}`;
-      if (authError) debugEl.textContent += `\nAuth-Fehler: ${authError.message}`;
-
-      // Keine Session? → Login
-      if (!session) {
-        debugEl.textContent += '\n➡️ Keine Session → leite zu /login um';
-        window.location.href = '/login';
-        return;
+      // Session erneuern, falls nötig
+      await supabase.auth.getSession();
+      lastRefresh = Date.now();
+      
+      // Warte 500ms für Token-Verarbeitung
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Profil laden mit Retry-Mechanismus
+      const profile = await loadProfileWithRetry(3, 1500);
+      
+      if (profile) {
+        document.getElementById('user-name').textContent = `${profile.first_name} ${profile.last_name}`;
+        document.getElementById('logoutBtn').style.display = 'inline-block';
       }
-
-      const userId = session.user.id;
-      const email = session.user.email;
-      debugEl.textContent += `\n✅ Eingeloggt als: ${email} (ID: ${userId})`;
-
-      const nameEl = document.getElementById('user-name');
-      const logoutBtn = document.getElementById('logoutBtn');
-
-      // Profil prüfen
-      const {  employee, error: dbError } = await supabase
-        .from('employees')
-        .select('first_name, last_name')
-        .eq('id', userId)
-        .single();
-
-      debugEl.textContent += `\nProfil-Abfrage: ${employee ? 'gefunden' : 'nicht gefunden'}`;
-      if (dbError) debugEl.textContent += `\nDB-Fehler: ${dbError.code} - ${dbError.message}`;
-
-      // Profil existiert nicht → anlegen
-      if (dbError?.code === 'PGRST116') {
-        debugEl.textContent += '\n🆕 Lege neues Profil an...';
-
-        const base = email.split('@')[0].replace(/[._-]/g, ' ');
-        const words = base.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
-        const firstName = words[0] || 'Nutzer';
-        const lastName = words.slice(1).join(' ') || '–';
-        const personalNumber = `TMP-${userId.substring(0, 6).toUpperCase()}`;
-
-        const { error: insertError } = await supabase.from('employees').insert({
-          id: userId,
-          first_name: firstName,
-          last_name: lastName,
-          personal_number: personalNumber,
-          role: 'technician'
-        });
-
-        if (insertError) {
-          debugEl.textContent += `\n❌ INSERT fehlgeschlagen: ${insertError.message}`;
-          nameEl.textContent = 'Profil-Fehler';
-        } else {
-          debugEl.textContent += `\n✅ Profil angelegt: ${firstName} ${lastName}`;
-          nameEl.textContent = `${firstName} ${lastName}`;
-        }
-      } 
-      // Profil existiert
-      else if (employee) {
-        debugEl.textContent += `\n✅ Profil geladen: ${employee.first_name} ${employee.last_name}`;
-        nameEl.textContent = `${employee.first_name} ${employee.last_name}`;
-      } 
-      // Unerwarteter Fehler
-      else {
-        debugEl.textContent += '\n❌ Unerwarteter Profil-Fehler';
-        nameEl.textContent = 'Profil-Fehler';
-      }
-
-      logoutBtn.style.display = 'inline-block';
+      
+      setupAutoRefresh();
     }
 
     document.getElementById('logoutBtn')?.addEventListener('click', async () => {
@@ -119,7 +147,10 @@
       window.location.href = '/login';
     });
 
-    init();
+    init().catch(err => {
+      debugEl.textContent += `\n❌ Initialisierungsfehler: ${err.message}`;
+      console.error('Init-Fehler:', err);
+    });
   </script>
 </body>
 </html>
