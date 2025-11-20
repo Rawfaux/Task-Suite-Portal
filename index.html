@@ -24,6 +24,7 @@
     <a href="/material" class="tile">Materialbestellungen</a>
     <a href="/personal" class="tile">Personalmanagement</a>
   </div>
+  <div id="debug" style="margin:1rem;padding:0.5rem;background:#e7f3ff;border-radius:4px;display:none;font-family:monospace;"></div>
   <script type="module" src="/js/datetime.js"></script>
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
@@ -32,34 +33,50 @@
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtwaG10anRla2JlaHZidXFtbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0MDc3NDEsImV4cCI6MjA3ODk4Mzc0MX0.P6dpB_jSEXE2jdF19tmv4pE-g3_EDFdTX_d74PUTz9U'
     );
 
-    async function init() {
-      // Warte, damit Magic Link verarbeitet wird
-      await new Promise(r => setTimeout(r, 300));
+    const debugEl = document.getElementById('debug');
 
-      // Session abrufen
+    async function init() {
+      debugEl.style.display = 'block';
+      debugEl.textContent = '🔍 Starte Initialisierung...';
+
+      // Warte, damit Magic Link verarbeitet wird
+      await new Promise(r => setTimeout(r, 500));
+      debugEl.textContent += '\n⏳ Wartezeit abgeschlossen';
+
+      // Session laden
       const { data, error: authError } = await supabase.auth.getSession();
       const session = data?.session;
+      
+      debugEl.textContent += `\nSession: ${session ? 'gefunden' : 'nicht gefunden'}`;
+      if (authError) debugEl.textContent += `\nAuth-Fehler: ${authError.message}`;
 
-      if (authError || !session) {
+      // Keine Session? → Login
+      if (!session) {
+        debugEl.textContent += '\n➡️ Keine Session → leite zu /login um';
         window.location.href = '/login';
         return;
       }
 
       const userId = session.user.id;
       const email = session.user.email;
+      debugEl.textContent += `\n✅ Eingeloggt als: ${email} (ID: ${userId})`;
+
       const nameEl = document.getElementById('user-name');
       const logoutBtn = document.getElementById('logoutBtn');
 
-      // Profil aus employees laden
+      // Profil prüfen
       const {  employee, error: dbError } = await supabase
         .from('employees')
         .select('first_name, last_name')
         .eq('id', userId)
         .single();
 
+      debugEl.textContent += `\nProfil-Abfrage: ${employee ? 'gefunden' : 'nicht gefunden'}`;
+      if (dbError) debugEl.textContent += `\nDB-Fehler: ${dbError.code} - ${dbError.message}`;
+
+      // Profil existiert nicht → anlegen
       if (dbError?.code === 'PGRST116') {
-        // ➕ NEUER NUTZER: Profil anlegen
-        console.log('🆕 Kein Profil gefunden – lege neues Profil an...');
+        debugEl.textContent += '\n🆕 Lege neues Profil an...';
 
         const base = email.split('@')[0].replace(/[._-]/g, ' ');
         const words = base.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
@@ -76,29 +93,32 @@
         });
 
         if (insertError) {
-          console.error('❌ Profil-Erstellung fehlgeschlagen:', insertError);
-          nameEl.textContent = 'Fehler: Profil';
+          debugEl.textContent += `\n❌ INSERT fehlgeschlagen: ${insertError.message}`;
+          nameEl.textContent = 'Profil-Fehler';
         } else {
-          console.log('✅ Profil erfolgreich in employees angelegt!');
+          debugEl.textContent += `\n✅ Profil angelegt: ${firstName} ${lastName}`;
           nameEl.textContent = `${firstName} ${lastName}`;
         }
-      } else if (employee) {
-        // ✅ BESTEHENDER NUTZER
+      } 
+      // Profil existiert
+      else if (employee) {
+        debugEl.textContent += `\n✅ Profil geladen: ${employee.first_name} ${employee.last_name}`;
         nameEl.textContent = `${employee.first_name} ${employee.last_name}`;
-      } else {
+      } 
+      // Unerwarteter Fehler
+      else {
+        debugEl.textContent += '\n❌ Unerwarteter Profil-Fehler';
         nameEl.textContent = 'Profil-Fehler';
       }
 
       logoutBtn.style.display = 'inline-block';
     }
 
-    // Logout-Funktion
     document.getElementById('logoutBtn')?.addEventListener('click', async () => {
       await supabase.auth.signOut();
       window.location.href = '/login';
     });
 
-    // Start
     init();
   </script>
 </body>
