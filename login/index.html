@@ -114,6 +114,11 @@ if (existingSession && existingSession.isLoggedIn) {
   return;
 }
 
+    if (existingSession && existingSession.isLoggedIn) {
+  window.location.href = '/dashboard';
+  return; // 👈 Sicherheitshalber
+}
+
   document.getElementById('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const firstName = e.target.firstName.value.trim();
