@@ -25,24 +25,24 @@
     <a href="/personal" class="tile">Personalmanagement</a>
   </div>
   <script type="module" src="/js/datetime.js"></script>
-  <script type="module">
+  <script>
     // Session prüfen
-    const session = JSON.parse(localStorage.getItem('taskSuiteSession') || 'null');
+    const sessionStr = localStorage.getItem('taskSuiteSession');
+    const session = sessionStr ? JSON.parse(sessionStr) : null;
     
     if (!session || !session.isLoggedIn) {
       window.location.href = '/login';
-      throw new Error('Nicht eingeloggt');
+    } else {
+      // Name anzeigen
+      document.getElementById('user-name').textContent = session.user.full_name;
+      document.getElementById('logoutBtn').style.display = 'inline-block';
+
+      // Logout-Funktion
+      document.getElementById('logoutBtn').addEventListener('click', () => {
+        localStorage.removeItem('taskSuiteSession');
+        window.location.href = '/login';
+      });
     }
-
-    // Name anzeigen
-    document.getElementById('user-name').textContent = session.user.full_name;
-    document.getElementById('logoutBtn').style.display = 'inline-block';
-
-    // Logout-Funktion
-    document.getElementById('logoutBtn').addEventListener('click', () => {
-      localStorage.removeItem('taskSuiteSession');
-      window.location.href = '/login';
-    });
   </script>
 </body>
 </html>
