@@ -107,6 +107,13 @@
     return name.replace(/[^a-z0-9-]/g, '');
   }
 
+    // Prüfe, ob Benutzer bereits in Session ist
+const existingSession = JSON.parse(localStorage.getItem('taskSuiteSession') || 'null');
+if (existingSession && existingSession.isLoggedIn) {
+  window.location.href = '/dashboard';
+  return;
+}
+
   document.getElementById('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const firstName = e.target.firstName.value.trim();
