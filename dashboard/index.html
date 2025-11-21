@@ -4,7 +4,49 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>TaskSuite Portal</title>
-  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    body {
+      font-family: sans-serif;
+      background-color: #f8f9fa;
+      padding: 1rem;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .tiles {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+    .tile {
+      padding: 1.5rem;
+      background: white;
+      border-radius: 8px;
+      text-align: center;
+      text-decoration: none;
+      color: #000;
+      font-weight: bold;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    button {
+      margin-top: 1rem;
+      padding: 0.4rem 1rem;
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    #access-denied {
+      text-align: center;
+      padding: 2rem;
+      background: #f8d7da;
+      color: #721c24;
+      border-radius: 8px;
+      margin: 1rem;
+    }
+  </style>
 </head>
 <body>
   <header>
@@ -13,7 +55,14 @@
     <p>Kalenderwoche: <span id="calendar-week">–</span></p>
     <button id="logoutBtn">Abmelden</button>
   </header>
-  <div class="tiles">
+  
+  <div id="access-denied" style="display:none;">
+    <h3>🔒 Zugriff verweigert</h3>
+    <p>Du musst dich zuerst anmelden, um das Dashboard zu sehen.</p>
+    <button onclick="window.location.href='/'" style="margin-top:1rem;">Zum Login</button>
+  </div>
+  
+  <div class="tiles" id="tilesContainer">
     <a href="/fahrtenbuch/" class="tile">Fahrtenbuch</a>
     <a href="/auftraege/" class="tile">Auftragsmanagement</a>
     <a href="/arbeitszeit/" class="tile">Arbeitszeit</a>
@@ -24,20 +73,56 @@
     <a href="/material/" class="tile">Materialbestellungen</a>
     <a href="/personal/" class="tile">Personalmanagement</a>
   </div>
-  <script type="module" src="/js/datetime.js"></script>
+
   <script>
-    const session = JSON.parse(localStorage.getItem('taskSuiteSession') || 'null');
-    
+    // Session prüfen
+    const sessionStr = localStorage.getItem('taskSuiteSession');
+    const session = sessionStr ? JSON.parse(sessionStr) : null;
+    const accessDenied = document.getElementById('access-denied');
+    const tilesContainer = document.getElementById('tilesContainer');
+    const userEl = document.getElementById('user-name');
+    const logoutBtn = document.getElementById('logoutBtn');
+
     if (!session || !session.isLoggedIn) {
-      window.location.href = '/';
-    } else {
-      document.getElementById('user-name').textContent = session.user.full_name;
+      console.log('Keine gültige Session – zeige Zugriffsverweigerung');
+      accessDenied.style.display = 'block';
+      tilesContainer.style.display = 'none';
+      userEl.textContent = 'Nicht angemeldet';
+      logoutBtn.style.display = 'none';
       
-      document.getElementById('logoutBtn').addEventListener('click', () => {
+      // Automatischer Redirect nach 3 Sekunden
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 3000);
+    } else {
+      console.log('Gültige Session gefunden:', session.user.full_name);
+      userEl.textContent = session.user.full_name;
+      logoutBtn.style.display = 'inline-block';
+      accessDenied.style.display = 'none';
+      
+      // Logout-Funktion
+      logoutBtn.addEventListener('click', function() {
         localStorage.removeItem('taskSuiteSession');
         window.location.href = '/';
       });
     }
+
+    // Datum/Zeit aktualisieren
+    function updateDateTime() {
+      const now = new Date();
+      const options = { 
+        weekday: 'long', 
+        day: '2-digit', 
+        month: '2-digit', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      };
+      document.getElementById('datetime').textContent = now.toLocaleDateString('de-DE', options) + ', ' + now.toLocaleTimeString('de-DE');
+    }
+    
+    updateDateTime();
+    setInterval(updateDateTime, 60000);
   </script>
 </body>
 </html>
