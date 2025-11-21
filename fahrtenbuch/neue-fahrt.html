@@ -16,7 +16,7 @@
   </style>
 </head>
 <body>
-  <a href="/fahrtenbuch/" class="back-link">← Zurück zur Fahrtenliste</a>
+  <a href="/fahrtenbuch" class="back-link">← Zurück zur Fahrtenliste</a>
   <h1>Neue Fahrt</h1>
 
   <form id="rideForm">
@@ -90,7 +90,7 @@
       localStorage.setItem('taskSuiteRides', JSON.stringify(rides));
       
       alert('✅ Fahrt gespeichert! Status: „Warte auf Ankunft“');
-      window.location.href = '/fahrtenbuch/';
+      window.location.href = '/fahrtenbuch';
     });
   </script>
 </body>
