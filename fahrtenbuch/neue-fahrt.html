@@ -16,7 +16,7 @@
   </style>
 </head>
 <body>
-  <a href="/fahrtenbuch" class="back-link">← Zurück zur Fahrtenliste</a>
+  <a href="/fahrtenbuch/" class="back-link">← Zurück zur Fahrtenliste</a>
   <h1>Neue Fahrt</h1>
 
   <form id="rideForm">
@@ -38,19 +38,15 @@
     <label>Kilometerstand Start</label>
     <input type="number" id="kmStart" placeholder="z. B. 12345" required>
 
-    <label>Foto vom km-Stand (Pflicht)</label>
-    <input type="file" id="photoInput" accept="image/*" capture="environment" required>
-    <img id="photoPreview">
-
     <button type="submit">Warte auf Ankunft</button>
   </form>
 
-  <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-    const supabase = createClient(
-      'https://kphmtjtekbehvbuqmndz.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtwaG10anRla2JlaHZidXFtbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0MDc3NDEsImV4cCI6MjA3ODk4Mzc0MX0.P6dpB_jSEXE2jdF19tmv4pE-g3_EDFdTX_d74PUTz9U'
-    );
+  <script>
+    // Prüfe Session
+    const session = JSON.parse(localStorage.getItem('taskSuiteSession') || 'null');
+    if (!session || !session.isLoggedIn) {
+      window.location.href = '/';
+    }
 
     // Datum/Uhrzeit vorausfüllen
     const now = new Date();
@@ -71,83 +67,31 @@
       );
     });
 
-    // Foto-Vorschau
-    document.getElementById('photoInput').addEventListener('change', e => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = ev => {
-          const img = document.getElementById('photoPreview');
-          img.src = ev.target.result;
-          img.style.display = 'block';
-        };
-        reader.readAsDataURL(file);
-      }
-    });
-
     // Speichern
-document.getElementById('rideForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const {  { session } } = await supabase.auth.getSession();
-  if (!session) return alert('Nicht eingeloggt.');
+    document.getElementById('rideForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      const ride = {
+        id: 'ride_' + Date.now(),
+        driver_name: session.user.full_name,
+        driver_id: session.user.id,
+        start_location: document.getElementById('startLocation').value,
+        destination: document.getElementById('destination').value,
+        km_start: document.getElementById('kmStart').value,
+        departure_at: new Date(
+          document.getElementById('dateStart').value + 'T' + 
+          document.getElementById('timeStart').value
+        ).toISOString(),
+        status: 'pending'
+      };
 
-  const {  emp } = await supabase
-    .from('employees_clean')
-    .select('first_name, last_name')
-    .eq('id', session.user.id)
-    .single();
-  if (!emp) return alert('Kein Personalprofil.');
-
-  const departureAt = new Date(
-    document.getElementById('dateStart').value + 'T' +
-    document.getElementById('timeStart').value
-  );
-
-  const ride = {
-    user_id: session.user.id,
-    full_name: `${emp.first_name} ${emp.last_name}`,
-    start_location: document.getElementById('startLocation').value,
-    destination: document.getElementById('destination').value,
-    km_start: parseFloat(document.getElementById('kmStart').value),
-    departure_at: departureAt.toISOString(),
-    status: 'pending'
-  };
-
-  // 1. ERST den Datensatz speichern (ohne Foto)
-  const {  newRide, error: rideError } = await supabase
-    .from('rides')
-    .insert(ride)
-    .select()
-    .single();
-
-  if (rideError) {
-    console.error('Datenbank-Fehler:', rideError);
-    return alert('Fahrt konnte nicht gespeichert werden: ' + rideError.message);
-  }
-
-  // 2. Dann Foto versuchen
-  const photoFile = document.getElementById('photoInput').files[0];
-  if (photoFile) {
-    const fileName = `rides/${newRide.id}/start.jpg`;
-    const { error: uploadError } = await supabase.storage
-      .from('ride-photos')
-      .upload(fileName, photoFile, { upsert: true });
-
-    if (uploadError) {
-      console.warn('Foto-Upload fehlgeschlagen:', uploadError);
-      alert('⚠️ Fahrt gespeichert, aber Foto-Upload fehlgeschlagen. Prüfe den Bucket "ride-photos".');
-    } else {
-      // 3. Foto-URL im Datensatz speichern
-      await supabase
-        .from('rides')
-        .update({ photo_start_url: fileName })
-        .eq('id', newRide.id);
-    }
-  }
-
-  alert('✅ Fahrt gespeichert!');
-  window.location.href = '/fahrtenbuch';
-});
+      let rides = JSON.parse(localStorage.getItem('taskSuiteRides') || '[]');
+      rides.unshift(ride); // Neueste zuerst
+      localStorage.setItem('taskSuiteRides', JSON.stringify(rides));
+      
+      alert('✅ Fahrt gespeichert! Status: „Warte auf Ankunft“');
+      window.location.href = '/fahrtenbuch/';
+    });
   </script>
 </body>
 </html>
