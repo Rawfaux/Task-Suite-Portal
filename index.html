@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Login – TaskSuite</title>
-  <link rel="stylesheet" href="/css/style.css">
   <style>
     body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background-color: #f8f9fa;
       padding: 1rem;
       max-width: 500px;
@@ -53,10 +53,19 @@
     button:hover {
       background: #0b5ed7;
     }
+    #error {
+      color: #dc3545;
+      background: #f8d7da;
+      padding: 0.75rem;
+      border-radius: 4px;
+      margin: 1rem 0;
+      display: none;
+    }
   </style>
 </head>
 <body>
   <h2>🔧 TaskSuite Login</h2>
+  <div id="error"></div>
   <form id="loginForm">
     <label for="firstName">Vorname</label>
     <input type="text" id="firstName" name="firstName" placeholder="Max" required>
@@ -69,33 +78,52 @@
 
   <script>
     // Prüfe, ob bereits eingeloggt
-    const existingSession = JSON.parse(localStorage.getItem('taskSuiteSession') || 'null');
-    if (existingSession?.isLoggedIn) {
+    const sessionStr = localStorage.getItem('taskSuiteSession');
+    const session = sessionStr ? JSON.parse(sessionStr) : null;
+    
+    if (session && session.isLoggedIn) {
+      console.log('Bereits eingeloggt – leite zum Dashboard um');
       window.location.href = '/dashboard';
       return;
     }
 
-    document.getElementById('loginForm').addEventListener('submit', (e) => {
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
       e.preventDefault();
-      const firstName = e.target.firstName.value.trim();
-      const lastName = e.target.lastName.value.trim();
+      const firstName = document.getElementById('firstName').value.trim();
+      const lastName = document.getElementById('lastName').value.trim();
+      const errorEl = document.getElementById('error');
       
       if (!firstName || !lastName) {
-        alert('Bitte Vor- und Nachnamen eingeben');
+        errorEl.textContent = '❌ Bitte Vor- und Nachnamen eingeben';
+        errorEl.style.display = 'block';
         return;
       }
 
-      localStorage.setItem('taskSuiteSession', JSON.stringify({
-        user: {
-          id: 'user_' + Date.now(),
-          first_name: firstName,
-          last_name: lastName,
-          full_name: `${firstName} ${lastName}`
-        },
-        isLoggedIn: true
-      }));
-      
-      window.location.href = '/dashboard';
+      try {
+        // Session im localStorage speichern
+        const sessionData = {
+          user: {
+            id: 'user_' + Date.now(),
+            first_name: firstName,
+            last_name: lastName,
+            full_name: `${firstName} ${lastName}`
+          },
+          isLoggedIn: true
+        };
+        
+        localStorage.setItem('taskSuiteSession', JSON.stringify(sessionData));
+        
+        console.log('Session gespeichert:', sessionData);
+        console.log('Leite zum Dashboard um...');
+        
+        // Sofortiger Redirect ohne Verzögerung
+        window.location.href = '/dashboard';
+        
+      } catch (err) {
+        console.error('Login-Fehler:', err);
+        errorEl.textContent = `❌ Fehler beim Login: ${err.message || 'Bitte versuche es erneut'}`;
+        errorEl.style.display = 'block';
+      }
     });
   </script>
 </body>
