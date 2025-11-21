@@ -71,7 +71,7 @@
     // Prüfe, ob bereits eingeloggt
     const existingSession = JSON.parse(localStorage.getItem('taskSuiteSession') || 'null');
     if (existingSession?.isLoggedIn) {
-      window.location.href = '/dashboard/';
+      window.location.href = '/dashboard';
       return;
     }
 
@@ -95,7 +95,7 @@
         isLoggedIn: true
       }));
       
-      window.location.href = '/dashboard/';
+      window.location.href = '/dashboard';
     });
   </script>
 </body>
