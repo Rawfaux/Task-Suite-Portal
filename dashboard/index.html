@@ -11,37 +11,31 @@
     <h2>Willkommen, <span id="user-name">Gast</span></h2>
     <p id="datetime">Lädt...</p>
     <p>Kalenderwoche: <span id="calendar-week">–</span></p>
-    <button id="logoutBtn" style="margin-top:1rem;padding:0.4rem;background:#dc3545;color:white;border:none;border-radius:4px;display:none;">Abmelden</button>
+    <button id="logoutBtn">Abmelden</button>
   </header>
   <div class="tiles">
-    <a href="/fahrtenbuch" class="tile">Fahrtenbuch</a>
-    <a href="/auftraege" class="tile">Auftragsmanagement</a>
-    <a href="/arbeitszeit" class="tile">Arbeitszeit</a>
-    <a href="/urlaub" class="tile">Urlaubsanträge</a>
-    <a href="/krankmeldung" class="tile">Krankmeldung</a>
-    <a href="/schichtplaner" class="tile">Schichtplaner</a>
-    <a href="/schulungen" class="tile">Schulungen</a>
-    <a href="/material" class="tile">Materialbestellungen</a>
-    <a href="/personal" class="tile">Personalmanagement</a>
+    <a href="/fahrtenbuch/" class="tile">Fahrtenbuch</a>
+    <a href="/auftraege/" class="tile">Auftragsmanagement</a>
+    <a href="/arbeitszeit/" class="tile">Arbeitszeit</a>
+    <a href="/urlaub/" class="tile">Urlaubsanträge</a>
+    <a href="/krankmeldung/" class="tile">Krankmeldung</a>
+    <a href="/schichtplaner/" class="tile">Schichtplaner</a>
+    <a href="/schulungen/" class="tile">Schulungen</a>
+    <a href="/material/" class="tile">Materialbestellungen</a>
+    <a href="/personal/" class="tile">Personalmanagement</a>
   </div>
   <script type="module" src="/js/datetime.js"></script>
   <script>
-    // Session prüfen
-    const sessionStr = localStorage.getItem('taskSuiteSession');
-    const session = sessionStr ? JSON.parse(sessionStr) : null;
+    const session = JSON.parse(localStorage.getItem('taskSuiteSession') || 'null');
     
     if (!session || !session.isLoggedIn) {
-      // Keine gültige Session → zum Login
-      window.location.href = '/login';
+      window.location.href = '/';
     } else {
-      // Name anzeigen
       document.getElementById('user-name').textContent = session.user.full_name;
-      document.getElementById('logoutBtn').style.display = 'inline-block';
-
-      // Logout-Funktion
+      
       document.getElementById('logoutBtn').addEventListener('click', () => {
         localStorage.removeItem('taskSuiteSession');
-        window.location.href = '/login';
+        window.location.href = '/';
       });
     }
   </script>
