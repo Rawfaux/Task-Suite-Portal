@@ -1,14 +1,25 @@
-// js/datetime.js
-function getWeek(d) {
-  d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+function getCalendarWeek(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
   return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
 }
-function update() {
+
+function updateDateTime() {
   const now = new Date();
-  document.getElementById('datetime').textContent = now.toLocaleString('de-DE');
-  document.getElementById('calendar-week').textContent = getWeek(now);
+  const options = { 
+    weekday: 'long', 
+    day: '2-digit', 
+    month: '2-digit', 
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  };
+  document.getElementById('datetime').textContent = now.toLocaleDateString('de-DE', options) + ', ' + now.toLocaleTimeString('de-DE');
+  document.getElementById('calendar-week').textContent = getCalendarWeek(now);
 }
-update();
-setInterval(update, 60000);
+
+// Sofort laden + jede Minute aktualisieren
+updateDateTime();
+setInterval(updateDateTime, 60000);
