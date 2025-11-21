@@ -3,47 +3,100 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TaskSuite Portal</title>
+  <title>Login – TaskSuite</title>
+  <link rel="stylesheet" href="/css/style.css">
   <style>
     body {
-      font-family: sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      margin: 0;
       background-color: #f8f9fa;
+      padding: 1rem;
+      max-width: 500px;
+      margin: 2rem auto;
     }
-    .redirect {
+    h2 {
       text-align: center;
-      padding: 2rem;
+      margin-bottom: 1.5rem;
+      color: #212529;
+    }
+    form {
       background: white;
+      padding: 1.5rem;
       border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
-    .spinner {
-      border: 3px solid #e9ecef;
-      border-top: 3px solid #0d6efd;
-      border-radius: 50%;
-      width: 30px;
-      height: 30px;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 1rem;
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+      color: #495057;
     }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+    input {
+      width: 100%;
+      padding: 0.6rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+    }
+    button {
+      width: 100%;
+      padding: 0.7rem;
+      background: #0d6efd;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-top: 1rem;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #0b5ed7;
     }
   </style>
 </head>
 <body>
-  <div class="redirect">
-    <div class="spinner"></div>
-    <p>Leite weiter zum Login...</p>
-  </div>
+  <h2>🔧 TaskSuite Login</h2>
+  <form id="loginForm">
+    <label for="firstName">Vorname</label>
+    <input type="text" id="firstName" name="firstName" placeholder="Max" required>
+    
+    <label for="lastName">Nachname</label>
+    <input type="text" id="lastName" name="lastName" placeholder="Mustermann" required>
+    
+    <button type="submit">Anmelden</button>
+  </form>
+
   <script>
-    // Sofortiger Redirect zu Login
-    window.location.href = '/login';
+    // Prüfe, ob bereits eingeloggt
+    const existingSession = JSON.parse(localStorage.getItem('taskSuiteSession') || 'null');
+    if (existingSession?.isLoggedIn) {
+      window.location.href = '/dashboard/';
+      return;
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const firstName = e.target.firstName.value.trim();
+      const lastName = e.target.lastName.value.trim();
+      
+      if (!firstName || !lastName) {
+        alert('Bitte Vor- und Nachnamen eingeben');
+        return;
+      }
+
+      localStorage.setItem('taskSuiteSession', JSON.stringify({
+        user: {
+          id: 'user_' + Date.now(),
+          first_name: firstName,
+          last_name: lastName,
+          full_name: `${firstName} ${lastName}`
+        },
+        isLoggedIn: true
+      }));
+      
+      window.location.href = '/dashboard/';
+    });
   </script>
 </body>
 </html>
