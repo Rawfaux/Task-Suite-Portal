@@ -69,19 +69,14 @@
   <form id="loginForm">
     <label for="firstName">Vorname</label>
     <input type="text" id="firstName" name="firstName" placeholder="Max" required>
+    
     <label for="lastName">Nachname</label>
     <input type="text" id="lastName" name="lastName" placeholder="Mustermann" required>
+    
     <button type="submit">Anmelden</button>
   </form>
 
-  <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-    // 🔑 ERSETZE DAS MIT DEINEM ECHTEN ANON KEY!
-    const supabase = createClient(
-      'https://kphmtjtekbehvbuqmndz.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtwaG10anRla2JlaHZidXFtbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0MDc3NDEsImV4cCI6MjA3ODk4Mzc0MX0.P6dpB_jSEXE2jdF19tmv4pE-g3_EDFdTX_d74PUTz9U'
-    );
-
+  <script>
     // Prüfe, ob bereits eingeloggt
     const existingSession = JSON.parse(localStorage.getItem('taskSuiteSession') || 'null');
     if (existingSession?.isLoggedIn) {
@@ -89,50 +84,38 @@
       return;
     }
 
-    async function findExistingUser(firstName, lastName) {
-      const {  users } = await supabase
-        .from('employees')
-        .select('id, personal_number')
-        .eq('first_name', firstName)
-        .eq('last_name', lastName)
-        .limit(1);
-      return users?.[0] || null;
-    }
-
-    function generateUserId(firstName, lastName) {
-      return `${firstName.toLowerCase()}-${lastName.toLowerCase()}`.replace(/[^a-z0-9-]/g, '');
-    }
-
-    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    document.getElementById('loginForm').addEventListener('submit', (e) => {
       e.preventDefault();
       const firstName = e.target.firstName.value.trim();
       const lastName = e.target.lastName.value.trim();
+      const fullName = `${firstName} ${lastName}`;
       const errorEl = document.getElementById('error');
 
-      try {
-        const existing = await findExistingUser(firstName, lastName);
-        const userId = existing?.id || generateUserId(firstName, lastName);
-        const personalNumber = existing?.personal_number || `TMP-${Date.now().toString().slice(-6)}`;
+      if (!firstName || !lastName) {
+        errorEl.textContent = '❌ Bitte Vor- und Nachnamen eingeben';
+        errorEl.style.display = 'block';
+        return;
+      }
 
-        if (!existing) {
-          await supabase.from('employees').insert({
-            id: userId,
+      try {
+        // Einfache Session im localStorage speichern
+        localStorage.setItem('taskSuiteSession', JSON.stringify({
+          user: {
+            id: 'user_' + Date.now(),
             first_name: firstName,
             last_name: lastName,
-            personal_number: personalNumber,
-            role: 'technician'
-          });
-        }
-
-        localStorage.setItem('taskSuiteSession', JSON.stringify({
-          user: { id: userId, first_name: firstName, last_name: lastName, full_name: `${firstName} ${lastName}`, personal_number },
+            full_name: fullName,
+            personal_number: `TMP-${Date.now().toString().slice(-6)}`
+          },
           isLoggedIn: true
         }));
-
+        
+        // Weiter zum Dashboard
         window.location.href = '/dashboard';
       } catch (err) {
-        errorEl.textContent = `❌ ${err.message || 'Unbekannter Fehler'}`;
+        errorEl.textContent = `❌ Fehler beim Anmelden: ${err.message || 'Bitte versuche es erneut'}`;
         errorEl.style.display = 'block';
+        console.error('Login-Fehler:', err);
       }
     });
   </script>
