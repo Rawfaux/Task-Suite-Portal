@@ -15,13 +15,10 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      background: white;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      margin-top: 1rem;
     }
     th, td {
-      padding: 0.8rem 0.6rem;
+      padding: 0.8rem;
       text-align: left;
       border-bottom: 1px solid #eee;
     }
@@ -32,29 +29,25 @@
     tr:hover {
       background: #f5f9ff;
     }
-    .status {
-      padding: 0.2rem 0.6rem;
-      border-radius: 4px;
-      font-size: 0.85rem;
-      font-weight: bold;
-    }
-    .status.pending { background: #fff3cd; color: #856404; }
-    .status.completed { background: #d4edda; color: #155724; }
-    .status.deleted { background: #f8d7da; color: #721c24; }
     .no-rides {
       text-align: center;
       padding: 2rem;
       color: #6c757d;
     }
-    .back-link { display: inline-block; margin: 1rem 0; }
+    .back-link {
+      display: inline-block;
+      margin: 1rem 0;
+      color: #0d6efd;
+      text-decoration: none;
+    }
   </style>
 </head>
 <body>
-  <a href="/dashboard" class="back-link">← Zurück zum Dashboard</a>
-
+  <a href="/dashboard/" class="back-link">← Zurück zum Dashboard</a>
+  
   <div class="header-actions">
     <h1>Fahrtenbuch</h1>
-    <a href="/fahrtenbuch/neue-fahrt.html" class="tile" style="width:auto; padding:0.6rem 1rem; text-align:center; text-decoration:none;">
+    <a href="/fahrtenbuch/neue-fahrt.html" class="tile" style="width:auto;padding:0.6rem 1rem;text-align:center;text-decoration:none;">
       + Neue Fahrt
     </a>
   </div>
@@ -63,94 +56,67 @@
     <p>Lade Fahrten...</p>
   </div>
 
-<script type="module">
-  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-  const supabase = createClient(
-    'https://kphmtjtekbehvbuqmndz.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtwaG10anRla2JlaHZidXFtbmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0MDc3NDEsImV4cCI6MjA3ODk4Mzc0MX0.P6dpB_jSEXE2jdF19tmv4pE-g3_EDFdTX_d74PUTz9U'
-  );
-
-  function formatDateTime(isoString) {
-    if (!isoString) return '–';
-    const d = new Date(isoString);
-    return d.toLocaleString('de-DE', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  }
-
-  function formatStatus(status) {
-    const labels = {
-      pending: 'Warte auf Ankunft',
-      completed: 'Abgeschlossen',
-      deleted: 'Gelöscht'
-    };
-    return labels[status] || status;
-  }
-
-  async function loadRides() {
-    const {  { session } } = await supabase.auth.getSession();
-    if (!session) {
-      document.getElementById('ridesList').innerHTML = 
-        '<p>❌ Nicht eingeloggt. <a href="/login">Login</a></p>';
-      return;
+  <script>
+    // Prüfe Session
+    const session = JSON.parse(localStorage.getItem('taskSuiteSession') || 'null');
+    if (!session || !session.isLoggedIn) {
+      window.location.href = '/';
     }
 
-    const {  rides, error } = await supabase
-      .from('rides')
-      .select('*')
-      .order('departure_at', { ascending: false });
-
-    if (error) {
-      document.getElementById('ridesList').innerHTML = 
-        `<p>❌ Fehler beim Laden: ${error.message}</p>`;
-      return;
+    function formatDateTime(dateString) {
+      if (!dateString) return '–';
+      const d = new Date(dateString);
+      return d.toLocaleString('de-DE', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
     }
 
-    if (rides.length === 0) {
-      document.getElementById('ridesList').innerHTML = 
-        '<p class="no-rides">Noch keine Fahrten erfasst.</p>';
-      return;
-    }
+    function loadRides() {
+      const rides = JSON.parse(localStorage.getItem('taskSuiteRides') || '[]');
+      const listEl = document.getElementById('ridesList');
+      
+      if (rides.length === 0) {
+        listEl.innerHTML = '<p class="no-rides">Noch keine Fahrten erfasst.</p>';
+        return;
+      }
 
-    let html = `
-      <table>
-        <thead>
-          <tr>
-            <th>Datum</th>
-            <th>Fahrer</th>
-            <th>Start → Ziel</th>
-            <th>km-Start</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-    `;
-
-    rides.forEach(ride => {
-      html += `
-        <tr onclick="window.location='/fahrtenbuch/fahrt.html?id=${ride.id}'" style="cursor:pointer;">
-          <td>${formatDateTime(ride.departure_at)}</td>
-          <td>${ride.full_name}</td>
-          <td>${ride.start_location} → ${ride.destination}</td>
-          <td>${ride.km_start || '–'}</td>
-          <td><span class="status ${ride.status}">${formatStatus(ride.status)}</span></td>
-        </tr>
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>Datum</th>
+              <th>Fahrer</th>
+              <th>Start → Ziel</th>
+              <th>km-Start</th>
+            </tr>
+          </thead>
+          <tbody>
       `;
-    });
 
-    html += `
-        </tbody>
-      </table>
-    `;
+      rides.slice(0, 10).forEach(ride => {
+        html += `
+          <tr onclick="window.location='/fahrtenbuch/fahrt.html?id=${ride.id}'" style="cursor:pointer;">
+            <td>${formatDateTime(ride.departure_at)}</td>
+            <td>${ride.driver_name || '–'}</td>
+            <td>${ride.start_location || '–'} → ${ride.destination || '–'}</td>
+            <td>${ride.km_start || '–'}</td>
+          </tr>
+        `;
+      });
 
-    document.getElementById('ridesList').innerHTML = html;
-  }
+      html += `
+          </tbody>
+        </table>
+      `;
 
-  loadRides();
-</script>
+      listEl.innerHTML = html;
+    }
+
+    loadRides();
+  </script>
 </body>
 </html>
